@@ -1,10 +1,10 @@
-import { RequestStatus, useRequest } from "@/request.provider";
+import { useAppSelector } from "@/hooks/use-store";
 import { LoaderCircleIcon } from "lucide-react";
 import { ResponseStatusBar } from "./_ResponseStatusBar";
 import { ResponseTabs } from "./_ResponseTabs";
 
 export function ResponsePanel() {
-  const { response } = useRequest();
+  const response = useAppSelector((state) => state.response.result);
 
   if (!response?.status) {
     return (
@@ -14,7 +14,7 @@ export function ResponsePanel() {
     );
   }
 
-  if (response.status === RequestStatus.Pending) {
+  if (response.status === "loading") {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
         <LoaderCircleIcon className="animate-spin" />

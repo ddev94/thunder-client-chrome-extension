@@ -1,61 +1,18 @@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { useRequest } from "@/request.provider";
+import { useRequestHeader } from "@/hooks/use-request-header";
 import { Plus, Trash2 } from "lucide-react";
-import { useMemo } from "react";
 
 export function RequestHeadersTab() {
-  const { request, setRequest } = useRequest();
-  const headers = useMemo(() => {
-    if (!request) return [];
-    return request.headers;
-  }, [request]);
-  const addHeader = () => {
-    if (!request) return;
-    setRequest({
-      ...request,
-      headers: [...headers, { header: "", value: "", isDisabled: false }],
-    });
-  };
-
-  const removeHeader = (index: number) => {
-    const newHeaders = [...headers];
-    if (!request) return;
-    newHeaders.splice(index, 1);
-    setRequest({
-      ...request,
-      headers: newHeaders,
-    });
-  };
-  const disableHeader = (index: number) => {
-    const newHeaders = [...headers];
-    if (!request) return;
-    newHeaders[index].isDisabled = !newHeaders[index].isDisabled;
-    setRequest({
-      ...request,
-      headers: newHeaders,
-    });
-  };
-
-  const onHeaderChange = (index: number, newHeader: string) => {
-    const newHeaders = [...headers];
-    if (!request) return;
-    newHeaders[index].header = newHeader;
-    setRequest({
-      ...request,
-      headers: newHeaders,
-    });
-  };
-  const onValueChange = (index: number, newValue: string) => {
-    const newHeaders = [...headers];
-    if (!request) return;
-    newHeaders[index].value = newValue;
-    setRequest({
-      ...request,
-      headers: newHeaders,
-    });
-  };
+  const {
+    headers,
+    addHeader,
+    removeHeader,
+    disableHeader,
+    onHeaderChange,
+    onValueChange,
+  } = useRequestHeader();
   return (
     <div>
       <h4 className="text-lg">Headers</h4>

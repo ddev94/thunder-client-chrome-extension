@@ -1,9 +1,9 @@
 import { JsonViewer } from "@/components/extra/json-tree-viewer";
-import { RequestStatus, useRequest } from "@/request.provider";
+import { useAppSelector } from "@/hooks/use-store";
 import { useMemo } from "react";
 
 export function ResponseTab() {
-  const { response } = useRequest();
+  const response = useAppSelector((state) => state.response.result);
   const body = useMemo(() => {
     try {
       return JSON.parse(response?.body || "");
@@ -22,10 +22,10 @@ export function ResponseTab() {
   }, [response]);
   return (
     <div className="h-full overflow-auto">
-      {body && isJSON && response?.status === RequestStatus.Fulfilled && (
+      {body && isJSON && response?.status === "succeeded" && (
         <JsonViewer data={body} rootName="" />
       )}
-      {body && !isJSON && response?.status === RequestStatus.Fulfilled && (
+      {body && !isJSON && response?.status === "succeeded" && (
         <pre className="whitespace-pre-wrap break-all">{body}</pre>
       )}
     </div>

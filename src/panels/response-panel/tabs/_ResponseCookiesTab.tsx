@@ -9,10 +9,10 @@ import {
 import { useAppSelector } from "@/hooks/use-store";
 import { useMemo } from "react";
 
-export const ResponseHeadersTab = () => {
+export const ResponseCookiesTab = () => {
   const response = useAppSelector((state) => state.response.result);
-  const headers = useMemo(() => {
-    return response?.headers;
+  const cookies = useMemo(() => {
+    return response?.cookies || [];
   }, [response]);
   return (
     <div className="h-full overflow-auto">
@@ -24,13 +24,13 @@ export const ResponseHeadersTab = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {headers?.map((header) => (
+          {cookies.map(({ key, value }) => (
             <TableRow
-              key={header.key}
+              key={key}
               className="odd:bg-muted/50 odd:hover:bg-muted/50 hover:bg-transparent"
             >
-              <TableCell className="font-medium">{header.key}</TableCell>
-              <TableCell>{header.value}</TableCell>
+              <TableCell className="font-medium">{key}</TableCell>
+              <TableCell>{value}</TableCell>
             </TableRow>
           ))}
         </TableBody>

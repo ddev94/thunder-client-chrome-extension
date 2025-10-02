@@ -1,10 +1,9 @@
+import { useRequestBody } from "@/hooks/use-request-body";
 import { cn } from "@/lib/utils";
-import { useRequest } from "@/request.provider";
 import { json } from "@codemirror/lang-json";
 import { tags as t } from "@lezer/highlight";
 import { createTheme } from "@uiw/codemirror-themes";
 import CodeMirror from "@uiw/react-codemirror";
-import { useState } from "react";
 
 const myTheme = createTheme({
   theme: "light",
@@ -42,42 +41,7 @@ type RequestBodyTabProps = {
 };
 
 export function RequestBodyTab({ className }: RequestBodyTabProps) {
-  const initialCode = JSON.stringify({}, null, 2);
-  const { request, setRequest } = useRequest();
-
-  const [code, setCode] = useState(initialCode);
-  const [jsonError, setJsonError] = useState<string | null>(null);
-
-  const validateJson = (value: string) => {
-    if (!value.trim()) {
-      setJsonError(null);
-      return;
-    }
-
-    try {
-      JSON.parse(value);
-      setJsonError(null);
-    } catch (error) {
-      if (error instanceof Error) {
-        setJsonError(error.message);
-      } else {
-        setJsonError("Invalid JSON syntax");
-      }
-    }
-  };
-
-  const handleChange = (value: string) => {
-    setCode(value);
-    if (request) {
-      setRequest({
-        ...request,
-        body: value,
-      });
-    }
-
-    validateJson(value);
-  };
-
+  const { body, jsonError, handleChange } = useRequestBody();
   return (
     <div className={cn(className)}>
       {jsonError && (
@@ -87,7 +51,7 @@ export function RequestBodyTab({ className }: RequestBodyTabProps) {
       )}
       <CodeMirror
         className="mt-4"
-        value={code}
+        value={body}
         extensions={[json()]}
         theme={myTheme}
         onChange={handleChange}

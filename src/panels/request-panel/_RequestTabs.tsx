@@ -26,29 +26,6 @@ const tabs = [
     value: "cookies",
     content: <RequestCookiesTab />,
   },
-
-  {
-    name: "Test",
-    value: "test",
-    content: (
-      <>
-        <span className="text-foreground font-semibold">Test!</span> Here&apos;s
-        something unexpected—a fun fact, a quirky tip, or a daily challenge.
-        Come back for a new surprise every day!
-      </>
-    ),
-  },
-  {
-    name: "Pre Run",
-    value: "pre-run",
-    content: (
-      <>
-        <span className="text-foreground font-semibold">Pre Run!</span>{" "}
-        Here&apos;s something unexpected—a fun fact, a quirky tip, or a daily
-        challenge. Come back for a new surprise every day!
-      </>
-    ),
-  },
 ];
 
 type RequestTabsProps = {

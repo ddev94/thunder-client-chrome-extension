@@ -14,7 +14,7 @@ Thunder Client Chrome Extension is a lightweight and fast REST API client extens
 
 1. Clone this repository:
   ```bash
-  git clone https://github.com/yourusername/thunderclient-chrome-extension.git
+  git clone https://github.com/ddev94/thunder-client-chrome-extension.git
   ```
 2. Open Chrome and go to `chrome://extensions/`
 3. Enable "Developer mode"

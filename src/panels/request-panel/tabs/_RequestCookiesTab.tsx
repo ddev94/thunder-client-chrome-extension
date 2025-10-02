@@ -8,80 +8,23 @@ import {
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { useRequest } from "@/request.provider";
+import { useRequestCookie } from "@/hooks/use-request-cookie";
 import { Plus, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
-
 export function RequestCookiesTab() {
-  const { request, setRequest } = useRequest();
-  const [cookieView, setCookieView] = useState<"key-value" | "view-raw">(
-    "key-value"
-  );
-  const [rawCookies, setRawCookies] = useState("");
-  const cookies = useMemo(() => {
-    if (!request) return [];
-    return request.cookies || [];
-  }, [request]);
-  const addCookie = () => {
-    if (!request) return;
-    setRequest({
-      ...request,
-      cookies: [...cookies, { key: "", value: "", isDisabled: false }],
-    });
-  };
+  const {
+    cookies,
+    addCookie,
+    removeCookie,
+    disableCookie,
+    onKeyChange,
+    onValueChange,
+    cookieView,
+    setCookieView,
+    setRawCookies,
+    importRawCookies,
+  } = useRequestCookie();
 
-  const removeCookie = (index: number) => {
-    const newCookies = [...cookies];
-    if (!request) return;
-    newCookies.splice(index, 1);
-    setRequest({
-      ...request,
-      cookies: newCookies,
-    });
-  };
-  const disableCookie = (index: number) => {
-    const newCookies = [...cookies];
-    if (!request) return;
-    newCookies[index].isDisabled = !newCookies[index].isDisabled;
-    setRequest({
-      ...request,
-      cookies: newCookies,
-    });
-  };
-
-  const onKeyChange = (index: number, newKey: string) => {
-    const newCookies = [...cookies];
-    if (!request) return;
-    newCookies[index].key = newKey;
-    setRequest({
-      ...request,
-      cookies: newCookies,
-    });
-  };
-  const onValueChange = (index: number, newValue: string) => {
-    const newCookies = [...cookies];
-    if (!request) return;
-    newCookies[index].value = newValue;
-    setRequest({
-      ...request,
-      cookies: newCookies,
-    });
-  };
-
-  const importRawCookies = () => {
-    const newCookies = rawCookies
-      .split(";")
-      .map((cookie) => cookie.trim())
-      .map((cookie) => {
-        const [key, value] = cookie.split("=");
-        return { key: key.trim(), value: value.trim(), isDisabled: false };
-      });
-    if (!request) return;
-    setRequest({
-      ...request,
-      cookies: [...cookies, ...newCookies],
-    });
-  };
+  console.log(cookies);
   return (
     <div>
       <h4 className="text-lg">Cookies</h4>

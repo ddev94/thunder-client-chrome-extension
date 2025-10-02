@@ -9,134 +9,106 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RequestStatus, useRequest } from "@/request.provider";
+import { useCollection } from "@/hooks/use-collection";
+import { useRequestMethod } from "@/hooks/use-request-method";
+import { useRequestUrl } from "@/hooks/use-request-url";
+import { useAppDispatch, useAppSelector } from "@/hooks/use-store";
+import { setResponseResult } from "@/store/slices/response.slice";
 import { LoaderCircleIcon } from "lucide-react";
 
 export const RequestLine = () => {
   const id = useId();
 
-  const methods = [
-    "GET",
-    "POST",
-    "PUT",
-    "DELETE",
-    "PATCH",
-    "HEAD",
-    "OPTIONS",
-    "TRACE",
-    "CONNECT",
-  ];
+  const { method, onMethodChange, methods } = useRequestMethod();
+  const { url, urlRef, onChange } = useRequestUrl();
+  const dispatch = useAppDispatch();
 
-  const { setResponse, response } = useRequest();
-  const { request, setRequest } = useRequest();
+  const response = useAppSelector((state) => state.response.result);
+  const { item } = useCollection();
 
-  const method = request?.method || "GET";
-  const url = request?.url || "";
-  const queryParams = request?.queryParams || [];
-  const cookies = request?.cookies || [];
-  const handleSendRequest = () => {
-    setResponse({
-      size: 0,
-      time: 0,
-      statusCode: 0,
-      status: RequestStatus.Pending,
-      body: "{}",
-    });
-
-    if (chrome.cookies) {
-      for (const cookie of cookies) {
-        if (!cookie.isDisabled && cookie.key) {
-          chrome.cookies.set({
-            url: url,
-            name: cookie.key,
-            value: cookie.value,
-          });
-        }
-      }
+  const sendRequest = () => {
+    if (!item?.request) {
+      console.warn("No request data available");
+      return;
     }
-
+    const { url, method, headers, body } = item.request;
+    dispatch(
+      setResponseResult({
+        statusCode: null,
+        statusText: "",
+        time: null,
+        size: null,
+        body: "",
+        headers: [],
+        cookies: [],
+        error: null,
+        status: "loading",
+      })
+    );
     const start = performance.now();
-    const searchParams = new URLSearchParams();
-    queryParams.forEach((qp) => {
-      if (!qp.isDisabled && qp.param) {
-        searchParams.append(qp.param, qp.value);
-      }
-    });
-    const urlWithParams =
-      url + (searchParams.toString() ? `?${searchParams.toString()}` : "");
-    const headers = new Headers();
-    for (const header of request?.headers.filter(
-      (header) => !header.isDisabled && !header.readonly
-    ) ?? []) {
-      if (!header.isDisabled && header.header) {
-        headers.append(header.header, header.value);
-      }
+    const urlWithParams = new URL(url);
+    // Append query parameters if any
+    if (item.request.queryParams) {
+      item.request.queryParams
+        .filter((param) => !param.isDisabled && param.param)
+        .forEach((param) => {
+          urlWithParams.searchParams.append(param.param, param.value);
+        });
     }
     fetch(urlWithParams, {
-      method,
-      headers,
-      body: ["GET", "HEAD"].includes(method) ? null : request?.body || null,
+      method: method || "GET",
+      headers: headers?.reduce((acc, header) => {
+        acc[header.header] = header.value;
+        return acc;
+      }, {} as Record<string, string>),
+      body: ["GET", "HEAD"].includes(method) ? null : body || null,
     })
-      .then(async (res) => {
-        console.log(res);
-        const text = await res.text();
-        const sizeInBytes = new TextEncoder().encode(text).length;
+      .then(async (response) => {
+        const sizeInBytes = new TextEncoder().encode(body).length;
         const end = performance.now();
-        const headers = res.headers;
-
-        setResponse({
-          size: sizeInBytes,
-          time: Math.round(end - start),
-          statusCode: res.status,
-          status: RequestStatus.Fulfilled,
-          body: text,
-          headers,
-        });
+        const responseBody = await response.text();
+        dispatch(
+          setResponseResult({
+            statusCode: response.status,
+            statusText: response.statusText,
+            time: Math.round(end - start),
+            size: sizeInBytes,
+            body: responseBody,
+            headers: Array.from(response.headers.entries()).map(
+              ([key, value]) => ({ key, value })
+            ),
+            cookies: [],
+            error: null,
+            status: "succeeded",
+          })
+        );
       })
-      .catch(() => {
-        setResponse({
-          size: 0,
-          time: 0,
-          statusCode: 500,
-          status: RequestStatus.Rejected,
-          body: "{}",
-        });
+      .catch((e) => {
+        console.error("Request failed", e);
+        dispatch(
+          setResponseResult({
+            statusCode: 500,
+            statusText: "Internal Server Error",
+            time: 0,
+            size: 0,
+            body: "",
+            headers: [],
+            cookies: [],
+            error: e.message,
+            status: "failed",
+          })
+        );
       })
       .finally(() => {
-        if (chrome.cookies) {
-          for (const cookie of cookies) {
-            if (!cookie.isDisabled && cookie.key) {
-              chrome.cookies.remove({ url: url, name: cookie.key });
-            }
-          }
-        }
+        // Any cleanup actions can be performed here
+        return null;
       });
-  };
-
-  const setUrl = (newUrl: string) => {
-    if (!request) return;
-    setRequest({
-      ...request,
-      url: newUrl,
-    });
-  };
-
-  const onMethodChange = (newMethod: string) => {
-    if (!request) return;
-    setRequest({
-      ...request,
-      method: newMethod,
-    });
   };
 
   return (
     <div className="w-full space-y-2">
       <div className="flex rounded-md shadow-xs">
-        <Select
-          defaultValue={method}
-          name="method"
-          onValueChange={onMethodChange}
-        >
+        <Select value={method} name="method" onValueChange={onMethodChange}>
           <SelectTrigger
             id={id}
             className="rounded-r-none shadow-none focus-visible:z-1 w-[120px]"
@@ -157,17 +129,18 @@ export const RequestLine = () => {
         </Select>
         <Input
           id={id}
+          ref={urlRef}
           type="text"
           className="-ms-px rounded-none shadow-none"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
+          defaultValue={url}
+          onChange={(e) => onChange(e.target.value)}
         />
         <Button
           className="rounded-l-none w-20"
-          onClick={handleSendRequest}
-          disabled={response?.status === RequestStatus.Pending}
+          onClick={() => sendRequest()}
+          disabled={response?.status === "loading"}
         >
-          {response?.status === RequestStatus.Pending && (
+          {response?.status === "loading" && (
             <LoaderCircleIcon className="animate-spin" />
           )}
           Send

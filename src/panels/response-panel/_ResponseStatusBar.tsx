@@ -1,17 +1,15 @@
 import { cn } from "@/lib/utils";
-import { useRequest } from "@/request.provider";
 import { useMemo } from "react";
 
-import {
-  getReasonPhrase
-} from "http-status-codes";
+import { useAppSelector } from "@/hooks/use-store";
+import { getReasonPhrase } from "http-status-codes";
 
 type ResponseStatusBarProps = {
   className?: string;
 };
 
 export function ResponseStatusBar({ className }: ResponseStatusBarProps) {
-  const { response } = useRequest();
+  const response = useAppSelector((state) => state.response.result);
 
   const statusText = useMemo(() => {
     const reasonPhrase = getReasonPhrase(response?.statusCode || 200);

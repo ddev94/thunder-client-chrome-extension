@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { ResponseCookiesTab } from "./tabs/_ResponseCookiesTab";
 import { ResponseHeadersTab } from "./tabs/_ResponseHeadersTab";
 import { ResponseTab } from "./tabs/_ResponseTab";
 
@@ -17,24 +18,7 @@ const tabs = [
   {
     name: "Cookies",
     value: "cookies",
-    content: (
-      <>
-        <span className="text-foreground font-semibold">Surprise!</span>{" "}
-        Here&apos;s something unexpected—a fun fact, a quirky tip, or a daily
-        challenge. Come back for a new surprise every day!
-      </>
-    ),
-  },
-  {
-    name: "Results",
-    value: "results",
-    content: (
-      <>
-        <span className="text-foreground font-semibold">Body!</span> Here&apos;s
-        something unexpected—a fun fact, a quirky tip, or a daily challenge.
-        Come back for a new surprise every day!
-      </>
-    ),
+    content: <ResponseCookiesTab />,
   },
 ];
 
