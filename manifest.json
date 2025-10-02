@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Thunderclient",
+  "version": "1.0.0",
+  "description": "A lightweight API client for testing APIs",
+  "permissions": ["storage", "tabs", "cookies"],
+  "action": {
+    "default_popup": "./popup.html"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["index.html"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ]
+}
