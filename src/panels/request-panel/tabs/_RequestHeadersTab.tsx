@@ -14,7 +14,7 @@ export function RequestHeadersTab() {
     onValueChange,
   } = useRequestHeader();
   return (
-    <div>
+    <div className="flex-1 overflow-y-auto px-4">
       <h4 className="text-lg">Headers</h4>
       <div>
         <Button size="sm" variant="ghost" className="mt-2" onClick={addHeader}>

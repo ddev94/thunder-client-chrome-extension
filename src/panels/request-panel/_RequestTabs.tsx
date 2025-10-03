@@ -35,7 +35,7 @@ type RequestTabsProps = {
 export const RequestTabs = ({ className }: RequestTabsProps) => {
   return (
     <div className={cn("w-full", className)}>
-      <Tabs defaultValue="query" className="gap-4">
+      <Tabs defaultValue="query" className="gap-4 h-full overflow-hidden">
         <TabsList className="bg-background rounded-none border-b w-full p-0">
           {tabs.map((tab) => (
             <TabsTrigger
@@ -62,7 +62,11 @@ export const RequestTabs = ({ className }: RequestTabsProps) => {
         </TabsList>
 
         {tabs.map((tab) => (
-          <TabsContent key={tab.value} value={tab.value}>
+          <TabsContent
+            key={tab.value}
+            value={tab.value}
+            className="overflow-y-auto"
+          >
             {tab.content}
           </TabsContent>
         ))}

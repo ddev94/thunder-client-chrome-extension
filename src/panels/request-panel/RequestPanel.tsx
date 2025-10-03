@@ -12,9 +12,9 @@ export function RequestPanel() {
     );
   }
   return (
-    <div className="h-full p-4">
+    <div className="h-full py-4 flex flex-col">
       <RequestLine />
-      <RequestTabs className="mt-4" />
+      <RequestTabs className="mt-4 flex-1 overflow-hidden" />
     </div>
   );
 }

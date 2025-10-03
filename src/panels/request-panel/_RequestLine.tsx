@@ -13,10 +13,13 @@ import { useCollection } from "@/hooks/use-collection";
 import { useRequestMethod } from "@/hooks/use-request-method";
 import { useRequestUrl } from "@/hooks/use-request-url";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-store";
+import { cn } from "@/lib/utils";
 import { setResponseResult } from "@/store/slices/response.slice";
 import { LoaderCircleIcon } from "lucide-react";
-
-export const RequestLine = () => {
+type RequestLineProps = {
+  className?: string;
+};
+export const RequestLine = ({ className }: RequestLineProps) => {
   const id = useId();
 
   const { method, onMethodChange, methods } = useRequestMethod();
@@ -64,9 +67,9 @@ export const RequestLine = () => {
       body: ["GET", "HEAD"].includes(method) ? null : body || null,
     })
       .then(async (response) => {
-        const sizeInBytes = new TextEncoder().encode(body).length;
         const end = performance.now();
         const responseBody = await response.text();
+        const sizeInBytes = new TextEncoder().encode(responseBody).length;
         dispatch(
           setResponseResult({
             statusCode: response.status,
@@ -106,7 +109,7 @@ export const RequestLine = () => {
   };
 
   return (
-    <div className="w-full space-y-2">
+    <div className={cn("w-full space-y-2 px-4", className)}>
       <div className="flex rounded-md shadow-xs">
         <Select value={method} name="method" onValueChange={onMethodChange}>
           <SelectTrigger

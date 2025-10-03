@@ -15,7 +15,7 @@ export function RequestQueryTab() {
   } = useRequestQuery();
 
   return (
-    <div>
+    <div className="flex-1 overflow-y-auto px-4">
       <h4 className="text-lg">Query Parameters</h4>
       <div>
         <Button
