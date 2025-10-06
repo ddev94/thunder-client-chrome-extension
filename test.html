@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>microCMS Live Preview</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --gap: 16px; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 0; padding: 16px; background: #f5f7fb; color: #111827;
+      display: grid; grid-template-columns: 420px 1fr; gap: var(--gap);
+      min-height: 100vh;
+    }
+    .card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+      padding: 14px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+    label { font-size: 12px; color: #374151; margin-bottom: 4px; display: block; }
+    input, select {
+      width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 14px; background: #fff;
+    }
+    input:focus, textarea:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+    button {
+      appearance: none; border: 0; background: #111827; color: #fff; padding: 10px 14px; border-radius: 10px; font-weight: 600;
+      cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,.06);
+    }
+    button.secondary { background: #6b7280; }
+    .muted { color: #6b7280; font-size: 12px; }
+    textarea {
+      width: 100%; height: 220px; padding: 12px; font-size: 14px; border: 1px solid #d1d5db;
+      border-radius: 10px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+      background: #fbfbfe;
+    }
+    .preview {
+      width: 100%; min-height: 360px; border: 1px dashed #c7cad1; border-radius: 12px; padding: 18px; overflow: auto; background: #ffffff;
+    }
+
+    /* Post layout (Image - Title - Content) */
+    .post { max-width: 960px; margin: 0 auto; display: grid; gap: 16px; }
+    .post img { width: 100%; height: auto; border-radius: 10px; border: 1px solid #e5e7eb; display: none; }
+    .post h1 { margin: 0; font-size: 26px; line-height: 1.25; }
+    .post .content { line-height: 1.7; }
+
+    .status { font-size: 12px; white-space: pre-wrap; background: #f9fafb; border: 1px solid #e5e7eb; padding: 8px; border-radius: 8px; }
+    @media (max-width: 1100px) { body { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <!-- Bảng điều khiển -->
+  <section class="card" id="panel">
+    <h2 style="margin: 0 0 6px 0; font-size: 18px;">Cấu hình microCMS</h2>
+    <div class="row">
+      <div>
+        <label>Trường Content (HTML)</label>
+        <input id="fieldName" placeholder="vd: duongtest, content, body" hidden />
+      </div>
+    </div>
+    <div style="display:flex; gap: 8px; align-items:center; flex-wrap: wrap;">
+      <button id="load">Tải từ microCMS</button>
+      <button id="fromJson" class="secondary">Dán JSON & hiển thị</button>
+      <button id="clear" class="secondary">Xóa nội dung</button>
+    </div>
+    <div class="status" id="status">Trạng thái: sẵn sàng.</div>
+
+    <details>
+      <summary class="muted">Ghi chú bảo mật</summary>
+      <div class="muted">
+        Không nên để lộ API Key trên production. File này chỉ phục vụ mục đích preview nội bộ.
+      </div>
+    </details>
+
+    <details>
+      <summary class="muted">Dán JSON phản hồi (tuỳ chọn)</summary>
+      <textarea id="jsonInput" placeholder='Dán nguyên JSON từ API vào đây để xem trước (không cần gọi API)'></textarea>
+    </details>
+  </section>
+
+  <!-- Khu vực Preview -->
+  <section class="card" style="gap: 16px;">
+    <div id="preview" class="preview">
+      <article class="post">
+        <img id="postImage" alt="" />
+        <h1 id="postTitle"></h1>
+        <div id="postContent" class="content"></div>
+      </article>
+    </div>
+  </section>
+
+  <style>
+    table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+  </style>
+
+  <script>
+  const $ = (id) => document.getElementById(id);
+
+  const statusEl = $("status");
+  const imgEl = $("postImage");
+  const titleEl = $("postTitle");
+  const contentEl = $("postContent");
+
+  let lastItem = null;
+
+  const setStatus = (m) => statusEl.textContent = m;
+
+  /* ---------------- Utils ---------------- */
+  function decodeHtmlEntities(str) {
+    const txt = document.createElement('textarea');
+    txt.innerHTML = str;
+    return txt.value;
+  }
+
+  // Chuẩn hoá URL ảnh: bỏ '=', bỏ url('...'), sửa //domain, bỏ escape '\/'
+  function normalizeUrl(u) {
+    if (!u) return "";
+    let s = String(u).trim();
+
+    if (s.startsWith("=")) s = s.slice(1).trim();
+
+    const urlWrap = s.match(/^url\((.*)\)$/i);
+    if (urlWrap) s = urlWrap[1].trim().replace(/^['"]|['"]$/g, "");
+
+    s = s.replace(/^['"]|['"]$/g, "");
+    if (s.startsWith("//")) s = window.location.protocol + s;
+    s = s.replace(/\\\//g, "/");
+
+    return s;
+  }
+
+  function fixClassPollution(root) {
+    // Loại bỏ thẻ HTML bị lẫn vào thuộc tính class (ví dụ class="<span>duongtest</span>")
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, null);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (node.hasAttribute && node.hasAttribute('class')) {
+        let cls = node.getAttribute('class');
+        if (cls && cls.includes('<')) {
+          const temp = document.createElement('div');
+          temp.innerHTML = cls;
+          cls = temp.textContent || temp.innerText || '';
+          node.setAttribute('class', cls.trim());
+        }
+      }
+    }
+    return root.innerHTML;
+  }
+
+  function sanitizeImgAttrs(rootEl) {
+  const imgs = rootEl.querySelectorAll("img");
+  imgs.forEach(img => {
+    const raw = img.getAttribute("data-src") ?? img.getAttribute("src") ?? "";
+    const ta = document.createElement("textarea");
+    ta.innerHTML = raw;
+    const cleaned = normalizeUrl(ta.value);
+    if (cleaned) {
+      img.setAttribute("src", cleaned);
+      // ép hiển thị ảnh trong content
+      img.style.display = "block";
+      img.style.maxWidth = "100%";
+      img.style.height = "auto";
+    }
+  });
+}
+
+  function extractImageUrl(val) {
+    if (!val) return "";
+    if (typeof val === "string") return normalizeUrl(val);
+    if (typeof val === "object" && typeof val.url === "string") return normalizeUrl(val.url);
+    return "";
+  }
+
+  /* --------------- Guess helpers --------------- */
+  function guessHtmlField(data, preferred) {
+    if (!data || typeof data !== 'object') return null;
+    if (preferred && typeof data[preferred] === 'string') return data[preferred];
+    const candidates = ["duongtest","content_html" ,"content", "body", "richText", "html", "text", "meta_description"];
+    for (const key of candidates) if (typeof data[key] === 'string') return data[key];
+    return null;
+  }
+
+  function guessTitle(data) {
+    if (!data || typeof data !== 'object') return "";
+    for (const k of ["title", "name", "heading"]) if (data[k]) return String(data[k]);
+    return "";
+  }
+
+  function guessImage(data) {
+    if (!data || typeof data !== 'object') return "";
+    for (const k of ["eyecatch", "mainImage", "image", "thumbnail", "hero", "ogImage"]) {
+      const u = extractImageUrl(data[k]);
+      if (u) return u;
+    }
+    return "";
+  }
+
+  /* --------------- Helpers bổ sung --------------- */
+  // so sánh URL sau khi chuẩn hoá
+  function sameUrl(a, b) {
+    return normalizeUrl(a) === normalizeUrl(b);
+  }
+
+  // Lấy ảnh đầu tiên trong vùng content (ưu tiên data-src, rồi src)
+  function pickImageFromContent(container) {
+    const img = container.querySelector("img[data-src], img[src]");
+    if (!img) return "";
+    const raw = img.getAttribute("data-src") || img.getAttribute("src") || "";
+    return normalizeUrl(raw);
+  }
+
+  /* --------------- Render --------------- */
+  // 1) ƯU TIÊN ảnh cover từ eyecatch/mainImage/image...
+  function renderTitleAndImage() {
+    const title = guessTitle(lastItem);
+    titleEl.textContent = title || "";
+
+    const cover = guessImage(lastItem); // dùng extractImageUrl + normalizeUrl sẵn có
+    if (cover) {
+      imgEl.src = cover;
+      imgEl.style.display = "block";
+      imgEl.alt = title || "";
+    } else {
+      // Không có eyecatch → tạm ẩn; sẽ fallback trong renderContentHtml()
+      imgEl.removeAttribute("src");
+      imgEl.style.display = "none";
+      imgEl.alt = "";
+    }
+  }
+
+  // 2) Render content: GIỮ nguyên mọi ảnh trong content
+  //    Chỉ Fallback set cover nếu CHƯA có cover
+  function renderContentHtml(rawHtml) {
+    let html = rawHtml ?? "";
+
+    // Decode nếu là HTML bị entity (&lt; ... &gt;)
+    if (typeof html === "string" && /&lt;|&#60;/.test(html)) {
+      html = decodeHtmlEntities(html);
+    }
+
+    // Nếu raw chỉ là URL ảnh thuần → bọc thành <img>
+    if (/^(https?:)?\/\/[^\s]+\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(html.trim())) {
+      html = `<p><img src="${html.trim()}" alt=""></p>`;
+    }
+
+    // Sửa class bị lẫn <span>, rồi gán vào DOM
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    html = fixClassPollution(tmp);
+    contentEl.innerHTML = html;
+
+    // Chuẩn hoá mọi <img> trong content (xử lý "=https://", url('...'), //, \/,...)
+    sanitizeImgAttrs(contentEl);
+
+    // ✅ KHÔNG xoá ảnh trong content. Giữ nguyên tất cả.
+
+    // Fallback cover NẾU chưa có eyecatch
+    if (!imgEl.getAttribute("src")) {
+      const first = pickImageFromContent(contentEl);
+      if (first) {
+        imgEl.src = first;
+        imgEl.style.display = "block";
+        imgEl.alt = titleEl.textContent || "";
+      }
+    }
+  }
+
+  /* --------------- Load & Actions --------------- */
+
+  // CẤU HÌNH DEMO — ĐỔI CHO PHÙ HỢP
+  const serviceDomain = "brandtoday";
+  const endpoint     = "blogs";
+  const contentId    = "zvy5a3th3wq";   // ví dụ: "bmik7p-ucl"
+  const draftKey     = "s2Z2Y2cSDo";
+  const apiKey       = "TmA6b1bHqOPecYHbYD2zX8tk4436uzgmQN3c";
+// contentId=zvy5a3th3wq&draftKey=s2Z2Y2cSDo
+
+  async function loadFromMicroCMS() {
+    let url = `https://${serviceDomain}.microcms.io/api/v1/${endpoint}`;
+    if (contentId) url += `/${encodeURIComponent(contentId)}`;
+
+    const qs = new URLSearchParams();
+    if (draftKey) qs.set('draftKey', draftKey);
+    if ([...qs.keys()].length) url += `?${qs.toString()}`;
+
+    setStatus(`Đang tải: ${url}`);
+
+    try {
+      const res = await fetch(url, { headers: apiKey ? { 'X-MICROCMS-API-KEY': apiKey } : {} });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+      const data = await res.json();
+
+      console.log(data);
+
+      let item = data;
+      if (!contentId && Array.isArray(data.contents)) {
+        item = data.contents[0];
+        if (!item) throw new Error('Không tìm thấy item nào trong endpoint này.');
+      }
+      lastItem = item;
+
+      // Lấy fieldName ở UI (nếu ẩn và để trống → mặc định 'duongtest')
+      const preferredField = ($("fieldName")?.value || "").trim() || "duongtest";
+      console.log(item, preferredField)
+      const html =
+        (preferredField && typeof item[preferredField] === 'string' ? item[preferredField] : null)
+        ?? guessHtmlField(item, preferredField)
+        ?? (typeof item === 'string' ? item : '');
+      console.log(html);
+      // Render
+      renderTitleAndImage();   // set cover theo eyecatch trước
+      renderContentHtml(html); // giữ ảnh trong content, fallback cover nếu cần
+
+      setStatus(`Đã tải & render (field = ${preferredField})`);
+      console.log("Field used:", preferredField, "Raw length:", html?.length);
+    } catch (err) {
+      console.error(err);
+      setStatus(`Lỗi: ${err.message}`);
+    }
+  }
+
+  function renderFromJsonBox() {
+    try {
+      const raw = $("jsonInput").value.trim();
+      if (!raw) { alert('Chưa có JSON.'); return; }
+      const data = JSON.parse(raw);
+      lastItem = data;
+
+      const preferredField = ($("fieldName")?.value || "").trim() || "duongtest";
+      const html =
+        (preferredField && typeof data[preferredField] === 'string' ? data[preferredField] : null)
+        ?? guessHtmlField(data, preferredField)
+        ?? "";
+
+      // Render
+      renderTitleAndImage();
+      renderContentHtml(html);
+
+      setStatus(`Đã render từ JSON (field = ${preferredField})`);
+    } catch (e) {
+      console.error(e);
+      setStatus('JSON không hợp lệ: ' + e.message);
+    }
+  }
+
+  $("load").addEventListener('click', loadFromMicroCMS);
+  $("fromJson").addEventListener('click', renderFromJsonBox);
+  $("clear").addEventListener('click', () => {
+    lastItem = null;
+    titleEl.textContent = '';
+    imgEl.removeAttribute("src"); imgEl.style.display = "none"; imgEl.alt = "";
+    contentEl.innerHTML = '';
+    setStatus('Đã xóa nội dung.');
+  });
+
+  // Tự render rỗng ban đầu
+  renderContentHtml("");
+</script>
+<style>
+  .post img {
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
+</style>
+</body>
+</html>

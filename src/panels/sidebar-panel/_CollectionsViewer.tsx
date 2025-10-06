@@ -1,81 +1,73 @@
-import { TreeView, type TreeDataItem } from "@/components/extra/tree-view";
-import { useAppDispatch, useAppSelector } from "@/hooks/use-store";
-import { storage } from "@/lib/storage";
-import { setCurrentItemId } from "@/store/slices/app.slice";
-import type { CollectionItemType } from "@/types/types";
-import { Folder, FolderOpen } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { CollectionItem } from "./_CollectionItem";
-import { MethodRenderer } from "./_MethodRenderer";
+import { ReactTreeView } from "@/components/extra/react-tree-view";
+import { useCollection } from "@/hooks/use-collection";
+import type { CollectionItemType, TreeDataItem } from "@/types/types";
+import { useDisclosure } from "@mantine/hooks";
+import { useMemo, useState } from "react";
+import { DeleteItemAlert } from "./_DeleteItemAlert";
+import { FolderNameDialog } from "./_FolderNameDialog";
 
 export function CollectionsViewer() {
-  const [expandedItemIds, setExpandedItemIds] = useState<string[]>([]);
-  const currentItemId = useAppSelector((state) => state.app.currentItemId);
-  const collections = useAppSelector((state) => state.app.collections);
-  const dispatch = useAppDispatch();
+  const [deleteAlertOpen, deleteAlertOpenHandlers] = useDisclosure();
+  const [renameDialogOpen, renameDialogOpenHandlers] = useDisclosure();
+  const [itemSelected, setItemSelected] = useState<
+    CollectionItemType | undefined
+  >();
+  const {
+    currentItemId,
+    collections,
+    expandedItemIds,
+    deleteItem,
+    addItem,
+    addFolder,
+    updateExpandedItemIds,
+    updateCurrentItemId,
+    renameItem,
+    onOrderChange,
+  } = useCollection();
+
+  console.log(collections);
+
   const data = useMemo<TreeDataItem[]>(() => {
-    function convertItem(item: CollectionItemType): TreeDataItem {
-      const converted: TreeDataItem = {
-        id: item.id,
-        icon:
-          item.type === "folder" || item.type === "collection" ? (
-            <Folder size={18} />
-          ) : (
-            <MethodRenderer method={item.request?.method} />
-          ),
-        openIcon: <FolderOpen size={18} />,
-        name: <CollectionItem item={item} />,
-        data: { request: item.request },
-      };
-
-      if (
-        (item.type === "folder" || item.type === "collection") &&
-        item.items &&
-        item.items.length > 0
-      ) {
-        converted.children = item.items.map(convertItem);
-      }
-      return converted;
-    }
-    return (collections || []).map(convertItem);
+    return JSON.parse(JSON.stringify(collections || []));
   }, [collections]);
-  const onSelectChange = async (item?: TreeDataItem) => {
-    if (!item) return;
-    if (item.children && item.children.length > 0) {
-      const expandedItemIds = await storage.get("expandedItemIds");
-      if (expandedItemIds && Array.isArray(expandedItemIds)) {
-        if (expandedItemIds.includes(item.id)) {
-          await storage.set(
-            "expandedItemIds",
-            expandedItemIds.filter((id) => id !== item.id)
-          );
-          setExpandedItemIds((prev) => prev.filter((id) => id !== item.id));
-        } else {
-          await storage.set("expandedItemIds", [...expandedItemIds, item.id]);
-          setExpandedItemIds((prev) => [...prev, item.id]);
-        }
-      } else {
-        await storage.set("expandedItemIds", [item.id]);
-        setExpandedItemIds([item.id]);
-      }
-    } else {
-      dispatch(setCurrentItemId(item?.id || null));
-    }
-  };
 
-  useEffect(() => {
-    (async () => {
-      const storedExpandedIds: string[] =
-        (await storage.get("expandedItemIds")) || [];
-      setExpandedItemIds(storedExpandedIds);
-    })();
-  }, []);
   return (
-    <TreeView
-      data={data}
-      expandedItemIds={expandedItemIds}
-      onSelectChange={onSelectChange}
-      selectedItemId={currentItemId as string}
-    />
+    <>
+      <ReactTreeView items={data} onSortEnd={onOrderChange} />
+      {/* <TreeView
+        data={data}
+        expandedItemIds={expandedItemIds}
+        onSelectChange={onSelectChange}
+        selectedItemId={currentItemId as string}
+        onDocumentDrag={(sourceItem, targetItem) => {
+          console.log("onDocumentDrag", sourceItem, targetItem);
+          onOrderChange(
+            sourceItem as CollectionItemType,
+            targetItem as CollectionItemType
+          );
+        }} // Disable document drag to prevent conflicts with dnd-kit
+      /> */}
+      <DeleteItemAlert
+        open={deleteAlertOpen}
+        onOpenChange={deleteAlertOpenHandlers.toggle}
+        itemSelected={itemSelected}
+        onOk={() => {
+          if (itemSelected) {
+            deleteItem(itemSelected.id);
+          }
+        }}
+      />
+      <FolderNameDialog
+        title="Rename Folder"
+        open={renameDialogOpen}
+        onOpenChange={renameDialogOpenHandlers.toggle}
+        itemSelected={itemSelected}
+        onOk={(newName: string) => {
+          if (itemSelected) {
+            renameItem(itemSelected.id, newName);
+          }
+        }}
+      />
+    </>
   );
 }

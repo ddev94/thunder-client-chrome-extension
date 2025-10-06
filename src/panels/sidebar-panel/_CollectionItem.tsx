@@ -3,50 +3,57 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useAppDispatch } from "@/hooks/use-store";
-import { addNewItem } from "@/store/slices/app.slice";
 import type { CollectionItemType } from "@/types/types";
-import { EditIcon, Ellipsis, PlusCircle } from "lucide-react";
+import { EditIcon, Ellipsis, PlusCircle, TrashIcon } from "lucide-react";
 import { useState } from "react";
 type CollectionItemProps = {
   item: CollectionItemType;
+  onDelete: () => void;
+  onAddItem: () => void;
+  onAddFolder: () => void;
+  onRename: () => void;
 };
-export function CollectionItem({ item }: CollectionItemProps) {
+export function CollectionItem({
+  item,
+  onAddItem,
+  onAddFolder,
+  onDelete,
+  onRename,
+}: CollectionItemProps) {
   const [open, setOpen] = useState(false);
-  const dispatch = useAppDispatch();
   const menuItems = [
     {
       name: "http_request",
       icon: <PlusCircle size={18} />,
       label: "HTTP Request",
     },
+    {
+      name: "folder",
+      icon: <PlusCircle size={18} />,
+      label: "New Folder",
+    },
     { name: "rename", icon: <EditIcon size={18} />, label: "Rename" },
+    { name: "delete", icon: <TrashIcon size={18} />, label: "Delete" },
   ];
 
   const menuItemsFiltered =
     item.type === "request"
-      ? menuItems.filter((mi) => mi.name !== "http_request")
+      ? menuItems.filter(
+          (mi) =>
+            mi.name !== "http_request" &&
+            mi.name !== "folder" &&
+            mi.name !== "rename"
+        )
       : menuItems;
   const handleMenuItemClick = (name: string) => {
     if (name === "http_request") {
-      dispatch(
-        addNewItem({
-          parentId: item.id,
-          newItem: {
-            id: crypto.randomUUID(),
-            name: "New Request",
-            type: "request",
-            request: {
-              url: "",
-              method: "GET",
-              headers: [],
-              body: "{}",
-            },
-          },
-        })
-      );
+      onAddItem();
     } else if (name === "rename") {
-      // Handle renaming
+      onRename();
+    } else if (name === "folder") {
+      onAddFolder();
+    } else if (name === "delete") {
+      onDelete();
     }
     setOpen(false);
   };
@@ -68,6 +75,7 @@ export function CollectionItem({ item }: CollectionItemProps) {
               key={item.label}
               className="flex text-sm items-center gap-2 cursor-pointer hover:bg-gray-200 rounded px-1 py-2"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 handleMenuItemClick(item.name);
               }}

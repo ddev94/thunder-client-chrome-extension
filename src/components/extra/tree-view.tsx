@@ -7,16 +7,14 @@ import { ChevronRight } from "lucide-react";
 import React, { useEffect } from "react";
 
 const treeVariants = cva(
-  "group hover:before:opacity-100 before:absolute before:rounded-lg before:left-0 px-2 before:w-full before:opacity-0 before:bg-accent/70 before:h-[2rem] before:-z-10"
+  "group hover:before:opacity-100 border-b border-b-2 border-transparent before:absolute before:rounded-lg before:left-0 px-2 before:w-full before:opacity-0 before:bg-accent/70 before:h-[2rem] before:-z-10"
 );
 
 const selectedTreeVariants = cva(
   "before:opacity-100 before:bg-accent/70 text-accent-foreground"
 );
 
-const dragOverVariants = cva(
-  "before:opacity-100 before:bg-primary/20 text-primary-foreground"
-);
+const dragOverVariants = cva("border-b border-b-2 border-primary");
 
 interface TreeDataItem {
   id: string;
@@ -279,7 +277,7 @@ const TreeNode = ({
             {item.actions}
           </TreeActions>
         </AccordionTrigger>
-        <AccordionContent className="ml-4 pl-1 border-l">
+        <AccordionContent className="pl-4! pl-1 border-l">
           <TreeItem
             data={item.children ? item.children : item}
             selectedItemId={selectedItemId}

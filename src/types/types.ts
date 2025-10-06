@@ -39,3 +39,11 @@ export type CollectionItemType = {
   request?: RequestType;
   data?: any;
 };
+
+export type TreeDataItem = {
+  id: string;
+  name: React.ReactNode;
+  children?: TreeDataItem[];
+  type?: "FOLDER" | "HTTP_REQUEST";
+  data?: RequestType;
+};

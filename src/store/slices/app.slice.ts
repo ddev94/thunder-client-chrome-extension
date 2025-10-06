@@ -1,5 +1,5 @@
 import { storage } from "@/lib/storage";
-import type { CollectionItemType } from "@/types/types";
+import type { CollectionItemType, TreeDataItem } from "@/types/types";
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
 type AppState = {
@@ -75,7 +75,39 @@ export const appSlice = createSlice({
         return false;
       };
       updateItem(state.collections);
+      state.currentItemId = newItem.id;
       storage.set("collections", state.collections);
+    },
+    deleteItem(state, action: PayloadAction<string>) {
+      const id = action.payload;
+      const deleteItemById = (items: CollectionItemType[]): boolean => {
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].id === id) {
+            items.splice(i, 1);
+            return true;
+          }
+          if (items[i].items && Array.isArray(items[i].items)) {
+            const found = deleteItemById(
+              items[i].items as CollectionItemType[]
+            );
+            if (found) {
+              return true;
+            }
+          }
+        }
+        return false;
+      };
+      deleteItemById(state.collections);
+      storage.set("collections", state.collections);
+    },
+
+    addRootItem(state, action: PayloadAction<CollectionItemType>) {
+      state.collections.unshift(action.payload);
+      storage.set("collections", state.collections);
+    },
+
+    updateOrder(state, action: PayloadAction<TreeDataItem[]>) {
+      storage.set("collections", action.payload);
     },
   },
 });
@@ -85,4 +117,7 @@ export const {
   setCurrentItemId,
   updateCollectionItemById,
   addNewItem,
+  deleteItem,
+  addRootItem,
+  updateOrder,
 } = appSlice.actions;
