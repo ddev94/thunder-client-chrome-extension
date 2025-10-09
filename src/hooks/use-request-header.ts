@@ -30,7 +30,7 @@ export const useRequestHeader = () => {
   const onHeaderChange = useDebouncedCallback(
     (index: number, newHeader: string) => {
       const newHeaders = [...headers];
-      newHeaders[index].header = newHeader;
+      newHeaders[index] = { ...newHeaders[index], header: newHeader };
       updateRequestItemById({
         headers: newHeaders,
       });
@@ -40,7 +40,7 @@ export const useRequestHeader = () => {
   const onValueChange = useDebouncedCallback(
     (index: number, newValue: string) => {
       const newHeaders = [...headers];
-      newHeaders[index].value = newValue;
+      newHeaders[index] = { ...newHeaders[index], value: newValue };
       updateRequestItemById({
         headers: newHeaders,
       });

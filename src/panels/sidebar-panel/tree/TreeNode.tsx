@@ -4,22 +4,27 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useCollection } from "@/hooks/use-collection";
+import { useAppDispatch, useAppSelector } from "@/hooks/use-store";
 import { cn } from "@/lib/utils";
-import { ChevronDown, Edit, Plus, Trash2 } from "lucide-react";
+import { updateExpanededItemIds } from "@/store/slices/app.slice";
+import { ChevronDown, Edit, Move, Plus, Trash2 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { MethodRenderer } from "./MethodRenderer";
 import { useTreeContext } from "./TreeContext";
 import type { FlatNode } from "./types";
+import { isParent } from "./utils";
 
 type TreeNodeProps = {
   node: FlatNode;
   onClick: (node: FlatNode) => void;
   onMove: ({
     dragId,
+    dropId,
     parentId,
     index,
   }: {
     dragId: string;
+    dropId: string;
     parentId: string | null;
     index: number;
   }) => void;
@@ -29,19 +34,29 @@ export function TreeNode({ node, onClick, onMove }: TreeNodeProps) {
   const {
     dropId,
     data,
-    expanededIds,
     onDragStart,
     onDragEnd,
     onDrop,
     onDragEnter,
     onDragOver,
     onDragLeave,
-    updateExpandedIds,
   } = useTreeContext();
 
   const [isRenaming, setIsRenaming] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { addHttpRequest, addFolder, deleteItem, updateName } = useCollection();
+  const {
+    addHttpRequest,
+    addFolder,
+    deleteItem,
+    updateName,
+    moveToRoot,
+    currentItemId,
+  } = useCollection();
+
+  const dispatch = useAppDispatch();
+
+  const expanededIds =
+    useAppSelector((state) => state.app.expandedItemIds) || [];
 
   const renameInputRef = useRef<HTMLInputElement>(null);
 
@@ -56,6 +71,7 @@ export function TreeNode({ node, onClick, onMove }: TreeNodeProps) {
     const dragId = e.dataTransfer.getData("text/plain");
     const parentId = node.parent ? node.parent.id : null;
     let index = -1;
+    if (isParent(data, dragId, node.id)) return;
     if (parentId) {
       index = data
         .filter((n) => n.parent?.id === parentId)
@@ -63,7 +79,7 @@ export function TreeNode({ node, onClick, onMove }: TreeNodeProps) {
     } else {
       index = data.filter((n) => !n.parent).findIndex((n) => n.id === node.id);
     }
-    onMove({ dragId, parentId, index });
+    onMove({ dragId, dropId: node.id, parentId, index });
     onDrop(dragId, node.id);
   };
 
@@ -107,6 +123,15 @@ export function TreeNode({ node, onClick, onMove }: TreeNodeProps) {
     e.stopPropagation();
     deleteItem(node.id);
   };
+
+  const handleMoveToRoot = (
+    e: React.MouseEvent<HTMLDivElement, MouseEvent>
+  ) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setMenuOpen(false);
+    moveToRoot(node.id);
+  };
   const method = node?.request?.method || "GET";
 
   const handleUpdateName = (newName?: string) => {
@@ -121,7 +146,7 @@ export function TreeNode({ node, onClick, onMove }: TreeNodeProps) {
   const style = { paddingLeft: paddingLeft };
 
   const isOpen = useMemo(() => {
-    return expanededIds.has(node.id);
+    return expanededIds.includes(node.id);
   }, [expanededIds]);
 
   const isHidden = useMemo(() => {
@@ -129,7 +154,7 @@ export function TreeNode({ node, onClick, onMove }: TreeNodeProps) {
     while (true) {
       const node = data.find((n) => n.id === nodeId);
       if (node && node.parent) {
-        if (!expanededIds.has(node.parent.id)) {
+        if (!expanededIds.includes(node.parent.id)) {
           return true;
         }
         nodeId = node.parent.id;
@@ -153,11 +178,12 @@ export function TreeNode({ node, onClick, onMove }: TreeNodeProps) {
         {
           hidden: isHidden,
           "border-primary": dropId === node.id,
+          "bg-accent/90": currentItemId === node.id,
         }
       )}
       onClick={() => {
         onClick(node);
-        updateExpandedIds(node.id);
+        dispatch(updateExpanededItemIds(node.id));
       }}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -179,16 +205,20 @@ export function TreeNode({ node, onClick, onMove }: TreeNodeProps) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            setIsRenaming(false);
             handleUpdateName(renameInputRef.current?.value);
+            setTimeout(() => {
+              setIsRenaming(false);
+            }, 100);
           }}
         >
           <input
             ref={renameInputRef}
-            className="border-none bg-transparent outline-none truncate"
+            className={cn("border-none bg-transparent outline-none", {
+              hidden: !isRenaming,
+            })}
             defaultValue={node.name}
-            readOnly={!isRenaming}
           />
+          <span className={cn({ hidden: isRenaming })}>{node.name}</span>
         </form>
       </div>
       <Popover open={menuOpen} onOpenChange={setMenuOpen}>
@@ -200,10 +230,11 @@ export function TreeNode({ node, onClick, onMove }: TreeNodeProps) {
           <div
             className={cn(
               "opacity-0 group-hover:opacity-100 border border-transparent rounded p-1 hover:bg-accent hover:text-accent-foreground cursor-pointer",
-              menuOpen && "opacity-100"
+              (menuOpen || currentItemId === node.id) && "opacity-100"
             )}
             onClick={(e) => {
               e.stopPropagation();
+              e.preventDefault();
               setMenuOpen(!menuOpen);
             }}
           >
@@ -229,15 +260,25 @@ export function TreeNode({ node, onClick, onMove }: TreeNodeProps) {
           <div
             className={cn(menuItemClass)}
             onClick={(e) => {
-              setIsRenaming(true);
-              renameInputRef.current?.focus();
-              renameInputRef.current?.select();
+              e.preventDefault();
               e.stopPropagation();
+              setIsRenaming(true);
+              console.log(renameInputRef.current);
+              setTimeout(() => {
+                renameInputRef.current?.focus();
+                // renameInputRef.current?.select();
+              }, 100);
+
               setMenuOpen(false);
             }}
           >
             <Edit size={18} /> <span>Rename</span>
           </div>
+          {node.parent && (
+            <div className={cn(menuItemClass)} onClick={handleMoveToRoot}>
+              <Move size={18} /> <span>Move to root</span>
+            </div>
+          )}
           <div className={cn(menuItemClass)} onClick={handleDelete}>
             <Trash2 size={18} /> <span>Delete</span>
           </div>

@@ -13,7 +13,7 @@ export function Layout() {
   const dispatch = useAppDispatch();
   // useCollectionData();
   useEffect(() => {
-    const collectionJson = localStorage.getItem("collections");
+    const collectionJson = localStorage.getItem("thunder:collections");
     if (collectionJson) {
       dispatch(setCollections(JSON.parse(collectionJson)));
     }

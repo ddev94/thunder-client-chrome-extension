@@ -7,10 +7,12 @@ import { flattenNodes } from "./utils";
 type TreeViewProps = {
   data: TreeNodeType[];
   onMove: ({
+    dropId,
     dragId,
     parentId,
     index,
   }: {
+    dropId: string;
     dragId: string;
     parentId: string | null;
     index: number;

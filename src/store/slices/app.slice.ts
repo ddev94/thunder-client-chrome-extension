@@ -8,14 +8,16 @@ type AppState = {
   collections: CollectionItemType[];
   renameDialogOpen?: boolean;
   currentEditingItem: CollectionItemType | null;
+  expandedItemIds?: string[];
 };
 
 const initialState: AppState = {
-  currentItemId: null,
+  currentItemId: storage.get("thunder:currentItemId") || null,
   currentItem: null,
   collections: [],
   renameDialogOpen: false,
   currentEditingItem: null,
+  expandedItemIds: storage.get("thunder:expandedItemIds") || [],
 };
 
 export const appSlice = createSlice({
@@ -24,10 +26,24 @@ export const appSlice = createSlice({
   reducers: {
     setCurrentItemId(state, action: PayloadAction<string | null>) {
       state.currentItemId = action.payload;
+      storage.set("thunder:currentItemId", state.currentItemId);
+    },
+    updateExpanededItemIds(state, action: PayloadAction<string>) {
+      if (state.expandedItemIds?.includes(action.payload)) {
+        state.expandedItemIds = state.expandedItemIds.filter(
+          (id) => id !== action.payload
+        );
+      } else {
+        state.expandedItemIds = [
+          ...(state.expandedItemIds || []),
+          action.payload,
+        ];
+      }
+      storage.set("thunder:expandedItemIds", state.expandedItemIds);
     },
     setCollections(state, action: PayloadAction<CollectionItemType[]>) {
       state.collections = action.payload;
-      storage.set("collections", state.collections);
+      storage.set("thunder:collections", state.collections);
     },
     updateCollectionItemById(
       state,
@@ -53,7 +69,7 @@ export const appSlice = createSlice({
         return false;
       };
       updateItem(state.collections);
-      storage.set("collections", state.collections);
+      storage.set("thunder:collections", state.collections);
     },
     addNewItem(
       state,
@@ -80,8 +96,10 @@ export const appSlice = createSlice({
         return false;
       };
       updateItem(state.collections);
-      state.currentItemId = newItem.id;
-      storage.set("collections", state.collections);
+      if (newItem.type !== "folder") {
+        state.currentItemId = newItem.id;
+      }
+      storage.set("thunder:collections", state.collections);
     },
     deleteItem(state, action: PayloadAction<string>) {
       const id = action.payload;
@@ -103,12 +121,12 @@ export const appSlice = createSlice({
         return false;
       };
       deleteItemById(state.collections);
-      storage.set("collections", state.collections);
+      storage.set("thunder:collections", state.collections);
     },
 
     addRootItem(state, action: PayloadAction<CollectionItemType>) {
       state.collections.unshift(action.payload);
-      storage.set("collections", state.collections);
+      storage.set("thunder:collections", state.collections);
     },
 
     updateOrder(_, action: PayloadAction<TreeDataItem[]>) {
@@ -129,6 +147,7 @@ export const appSlice = createSlice({
 export const {
   setCollections,
   setCurrentItemId,
+  updateExpanededItemIds,
   updateCollectionItemById,
   addNewItem,
   deleteItem,

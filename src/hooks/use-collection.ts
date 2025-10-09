@@ -1,4 +1,6 @@
+import { findNestedItemById, removeNestedItemById } from "@/lib/array";
 import { storage } from "@/lib/storage";
+import type { TreeNode } from "@/panels/sidebar-panel/tree/types";
 import {
   addNewItem,
   addRootItem,
@@ -21,6 +23,12 @@ export const useCollection = () => {
   const selectedItemId = useAppSelector((state) => state.app.currentItemId);
   const currentItemId = useAppSelector((state) => state.app.currentItemId);
   const [expandedItemIds, setExpandedItemIds] = useState<string[]>([]);
+
+  const [data, setData] = useState<TreeNode[]>([]);
+
+  useEffect(() => {
+    setData(JSON.parse(JSON.stringify(collections || [])));
+  }, [collections]);
 
   const dispatch = useAppDispatch();
   const item = useMemo(() => {
@@ -199,6 +207,13 @@ export const useCollection = () => {
     dispatch(setCollections(newCollections));
   };
 
+  const moveToRoot = (id: string) => {
+    const item = findNestedItemById(data, id);
+    const newData = removeNestedItemById(data, id);
+    newData.unshift(item!);
+    updateSortPosition(newData);
+  };
+
   return {
     currentItemId,
     item,
@@ -217,5 +232,6 @@ export const useCollection = () => {
     addRootHttpRequest,
     onOrderChange,
     updateSortPosition,
+    moveToRoot,
   };
 };
