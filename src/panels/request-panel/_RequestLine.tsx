@@ -58,12 +58,16 @@ export const RequestLine = ({ className }: RequestLineProps) => {
           urlWithParams.searchParams.append(param.param, param.value);
         });
     }
+
+    const h = new Headers();
+    for (const header of headers || []) {
+      if (!header.isDisabled && header.header) {
+        h.append(header.header, header.value);
+      }
+    }
     fetch(urlWithParams, {
       method: method || "GET",
-      headers: headers?.reduce((acc, header) => {
-        acc[header.header] = header.value;
-        return acc;
-      }, {} as Record<string, string>),
+      headers: h,
       body: ["GET", "HEAD"].includes(method) ? null : body || null,
     })
       .then(async (response) => {

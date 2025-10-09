@@ -35,7 +35,7 @@ export type CollectionItemType = {
   id: string;
   name: string;
   type: "collection" | "folder" | "request";
-  items?: CollectionItemType[];
+  children?: CollectionItemType[];
   request?: RequestType;
   data?: any;
 };

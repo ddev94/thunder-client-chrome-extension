@@ -20,12 +20,12 @@ export function removeNestedItemById<T extends { id: string; children?: T[] }>(
   data: T[],
   id: string
 ): T[] {
-  let removedItem: T | null = null;
+  // let removedItem: T | null = null;
 
   const filterItems = (items: T[]): T[] => {
     return items.filter((item) => {
       if (item.id === id) {
-        removedItem = item;
+        // removedItem = item;
         return false;
       }
       if (item.children && Array.isArray(item.children)) {

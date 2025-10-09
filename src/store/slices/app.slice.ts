@@ -6,12 +6,16 @@ type AppState = {
   currentItemId: string | null;
   currentItem: CollectionItemType | null;
   collections: CollectionItemType[];
+  renameDialogOpen?: boolean;
+  currentEditingItem: CollectionItemType | null;
 };
 
 const initialState: AppState = {
   currentItemId: null,
   currentItem: null,
   collections: [],
+  renameDialogOpen: false,
+  currentEditingItem: null,
 };
 
 export const appSlice = createSlice({
@@ -23,6 +27,7 @@ export const appSlice = createSlice({
     },
     setCollections(state, action: PayloadAction<CollectionItemType[]>) {
       state.collections = action.payload;
+      storage.set("collections", state.collections);
     },
     updateCollectionItemById(
       state,
@@ -32,14 +37,14 @@ export const appSlice = createSlice({
       }>
     ) {
       const { id, updateFn } = action.payload;
-      const updateItem = (items: CollectionItemType[]): boolean => {
-        for (const item of items) {
+      const updateItem = (children: CollectionItemType[]): boolean => {
+        for (const item of children) {
           if (item.id === id) {
             updateFn(item);
             return true;
           }
-          if (item.items && Array.isArray(item.items)) {
-            const found = updateItem(item.items);
+          if (item.children && Array.isArray(item.children)) {
+            const found = updateItem(item.children);
             if (found) {
               return true;
             }
@@ -56,17 +61,17 @@ export const appSlice = createSlice({
     ) {
       const { parentId, newItem } = action.payload;
       console.log("Adding new item", parentId, newItem);
-      const updateItem = (items: CollectionItemType[]): boolean => {
-        for (const item of items) {
+      const updateItem = (children: CollectionItemType[]): boolean => {
+        for (const item of children) {
           if (item.id === parentId) {
-            if (!item.items) {
-              item.items = [];
+            if (!item.children) {
+              item.children = [];
             }
-            item.items.unshift(newItem);
+            item.children.unshift(newItem);
             return true;
           }
-          if (item.items && Array.isArray(item.items)) {
-            const found = updateItem(item.items);
+          if (item.children && Array.isArray(item.children)) {
+            const found = updateItem(item.children);
             if (found) {
               return true;
             }
@@ -80,15 +85,15 @@ export const appSlice = createSlice({
     },
     deleteItem(state, action: PayloadAction<string>) {
       const id = action.payload;
-      const deleteItemById = (items: CollectionItemType[]): boolean => {
-        for (let i = 0; i < items.length; i++) {
-          if (items[i].id === id) {
-            items.splice(i, 1);
+      const deleteItemById = (children: CollectionItemType[]): boolean => {
+        for (let i = 0; i < children.length; i++) {
+          if (children[i].id === id) {
+            children.splice(i, 1);
             return true;
           }
-          if (items[i].items && Array.isArray(items[i].items)) {
+          if (children[i].children && Array.isArray(children[i].children)) {
             const found = deleteItemById(
-              items[i].items as CollectionItemType[]
+              children[i].children as CollectionItemType[]
             );
             if (found) {
               return true;
@@ -106,8 +111,17 @@ export const appSlice = createSlice({
       storage.set("collections", state.collections);
     },
 
-    updateOrder(state, action: PayloadAction<TreeDataItem[]>) {
+    updateOrder(_, action: PayloadAction<TreeDataItem[]>) {
       storage.set("collections", action.payload);
+    },
+    toggleRenameDialog(state, action: PayloadAction<boolean>) {
+      state.renameDialogOpen = action.payload;
+    },
+    setCurrentEditingItem(
+      state,
+      action: PayloadAction<CollectionItemType | null>
+    ) {
+      state.currentEditingItem = action.payload;
     },
   },
 });
@@ -120,4 +134,6 @@ export const {
   deleteItem,
   addRootItem,
   updateOrder,
+  toggleRenameDialog,
+  setCurrentEditingItem,
 } = appSlice.actions;

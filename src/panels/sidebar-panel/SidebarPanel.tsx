@@ -1,11 +1,11 @@
 import { CollectionHeader } from "./_CollectionHeader";
-import { CollectionsViewer } from "./_CollectionsViewer";
+import { TreeView } from "./_TreeView";
 
 export function SidebarPanel() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <CollectionHeader />
-      <CollectionsViewer />
+      <TreeView />
     </div>
   );
 }

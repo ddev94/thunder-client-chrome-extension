@@ -1,12 +1,11 @@
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { CollectionItemType } from "@/types/types";
 import { useForm } from "@mantine/form";
@@ -18,7 +17,7 @@ type RenameItemDialogProps = DialogProps & {
   onOk: (newName: string) => void;
 };
 
-export const FolderNameDialog = ({
+export const RenameFolderDialog = ({
   title,
   itemSelected,
   onOk,
@@ -28,11 +27,11 @@ export const FolderNameDialog = ({
     initialValues: { name: itemSelected?.name || "" },
   });
   return (
-    <AlertDialog {...props}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-        </AlertDialogHeader>
+    <Dialog {...props}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
         <form
           onSubmit={form.onSubmit((values) => {
             onOk(values.name.trim());
@@ -42,12 +41,17 @@ export const FolderNameDialog = ({
           <div>
             <Input {...form.getInputProps("name")} />
           </div>
-          <AlertDialogFooter className="mt-4">
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => props.onOpenChange?.(false)}
+            >
+              Cancel
+            </Button>
             <Button type="submit">OK</Button>
-          </AlertDialogFooter>
+          </DialogFooter>
         </form>
-      </AlertDialogContent>
-    </AlertDialog>
+      </DialogContent>
+    </Dialog>
   );
 };

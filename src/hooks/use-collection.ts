@@ -3,6 +3,7 @@ import {
   addNewItem,
   addRootItem,
   deleteItem,
+  setCollections,
   setCurrentItemId,
   updateCollectionItemById,
   updateOrder,
@@ -33,8 +34,8 @@ export const useCollection = () => {
         if (item.id === id) {
           return item;
         }
-        if (item.items && Array.isArray(item.items)) {
-          const found = findItemById(item.items, id);
+        if (item.children && Array.isArray(item.children)) {
+          const found = findItemById(item.children, id);
           if (found) {
             return found;
           }
@@ -67,10 +68,10 @@ export const useCollection = () => {
     );
   };
 
-  const addItem = (item: CollectionItemType) => {
+  const addHttpRequest = (parentId: string) => {
     dispatch(
       addNewItem({
-        parentId: item.id,
+        parentId: parentId,
         newItem: {
           id: crypto.randomUUID(),
           name: "New Request",
@@ -86,15 +87,15 @@ export const useCollection = () => {
     );
   };
 
-  const addFolder = (item: CollectionItemType) => {
+  const addFolder = (parentId: string) => {
     dispatch(
       addNewItem({
-        parentId: item.id,
+        parentId: parentId,
         newItem: {
           id: crypto.randomUUID(),
           name: "New Folder",
           type: "folder",
-          items: [],
+          children: [],
         },
       })
     );
@@ -136,15 +137,15 @@ export const useCollection = () => {
     dispatch(setCurrentItemId(id));
   };
 
-  const updateName = (name: string) => {
-    if (!selectedItemId || !collections) {
+  const updateName = (id: string, name: string) => {
+    if (!id) {
       console.warn("No selectedItemId or collections available");
       return;
     }
 
     dispatch(
       updateCollectionItemById({
-        id: selectedItemId,
+        id: id,
         updateFn(item) {
           item.name = name;
         },
@@ -169,7 +170,7 @@ export const useCollection = () => {
         id: crypto.randomUUID(),
         name: "New Folder",
         type: "folder",
-        items: [],
+        children: [],
       })
     );
   };
@@ -194,6 +195,10 @@ export const useCollection = () => {
     dispatch(updateOrder(items));
   };
 
+  const updateSortPosition = (newCollections: CollectionItemType[]) => {
+    dispatch(setCollections(newCollections));
+  };
+
   return {
     currentItemId,
     item,
@@ -201,7 +206,7 @@ export const useCollection = () => {
     selectedItemId,
     expandedItemIds,
     updateRequestItemById,
-    addItem,
+    addHttpRequest,
     addFolder,
     updateExpandedItemIds,
     updateCurrentItemId,
@@ -211,5 +216,6 @@ export const useCollection = () => {
     addRootFolder: addRootFolder,
     addRootHttpRequest,
     onOrderChange,
+    updateSortPosition,
   };
 };

@@ -157,6 +157,11 @@
   }
 }
 
+body {
+  /* font-size: var(--text-sm); */
+  font-size: 16px;
+}
+
 html, body, #root {
   height: 100%;
   width: 100%;
